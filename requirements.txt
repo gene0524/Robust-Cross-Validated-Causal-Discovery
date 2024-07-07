@@ -1,0 +1,14 @@
+numpy
+scipy
+scikit-learn>=1.2
+graphviz
+statsmodels
+networkx
+pandas
+pygam
+matplotlib
+psy
+semopy
+seaborn
+#optional (install if gpu and cuda is available)
+# culingam
