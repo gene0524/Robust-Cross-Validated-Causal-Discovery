@@ -1,0 +1,13 @@
+numpy
+scipy
+scikit-learn
+graphviz
+statsmodels
+networkx
+pandas
+pygam
+matplotlib
+psy
+semopy
+sphinx
+sphinx_rtd_theme

@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./causal/discovery_methods/python_packages/tigramite_master"
+    ]
+}

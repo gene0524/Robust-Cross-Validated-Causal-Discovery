@@ -11,4 +11,3 @@ psy
 semopy
 seaborn
 #optional (install if gpu and cuda is available)
-# culingam
