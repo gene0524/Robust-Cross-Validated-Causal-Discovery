@@ -17,7 +17,7 @@ def plot_time_series(data, columns, title="Time Series Plot"):
     plt.show()
 
 
-def plot_heatmap(adjacency_matrices, columns):
+def plot_heatmap(adjacency_matrices, columns, title="Heatmap of Adjacency Matrices"):
     num_matrices = len(adjacency_matrices)
     
     # set figure layout
@@ -65,6 +65,7 @@ def plot_heatmap(adjacency_matrices, columns):
         col = i % ncols
         fig.delaxes(axes[row, col])
     
+    fig.suptitle(title, fontsize=16, y=1.02)
     plt.tight_layout()
     plt.show()
 
