@@ -6,7 +6,7 @@ from src.models.tigramite_master.tigramite import data_processing as pp
 from src.causal_matrix_evaluation import evaluate_causal_matrices
 from itertools import product
 
-def run_varlingam(data, lags=5):
+def run_varlingam(data, lags=3):
     """
     Run VAR-LiNGAM on the given data.
     
@@ -19,7 +19,7 @@ def run_varlingam(data, lags=5):
     return results
 
 
-def run_pcmci(data, columns=None, alpha=0.05, tau_max=1):
+def run_pcmci(data, columns=None, alpha=0.05, tau_max=3):
     """
     Run PCMCI on the given data.
     
@@ -204,9 +204,9 @@ def grid_search_varlingam_bootstrap(data, true_matrices, param_grid=None):
     if param_grid is None:
         param_grid = {
             'lags': range(1, 6),
-            'n_sampling': range(10, 101, 50),
-            'variance_threshold': np.arange(0.1, 1.1, 0.5),
-            'occurrence_threshold': np.arange(0.1, 1.0, 0.5)
+            'n_sampling': range(10, 101, 20),
+            'variance_threshold': np.arange(0.1, 1.1, 0.2),
+            'occurrence_threshold': np.arange(0.1, 1.0, 0.2)
         }
 
     param_combinations = list(product(*param_grid.values()))

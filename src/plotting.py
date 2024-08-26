@@ -15,6 +15,7 @@ def plot_time_series(data, columns, title="Time Series Plot"):
     plt.legend()
     plt.grid(True)
     plt.show()
+    return plt.gcf()
 
 
 def plot_heatmap(adjacency_matrices, columns, title="Heatmap of Adjacency Matrices"):
@@ -68,6 +69,7 @@ def plot_heatmap(adjacency_matrices, columns, title="Heatmap of Adjacency Matric
     fig.suptitle(title, fontsize=16, y=1.02)
     plt.tight_layout()
     plt.show()
+    return plt.gcf()
 
 
 def plot_causal_graph(

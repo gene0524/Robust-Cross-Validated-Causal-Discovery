@@ -15,14 +15,31 @@ def calculate_f1(A, B):
 def calculate_f1_directed(A, B):
     true = np.sign(A).flatten()
     pred = np.sign(B).flatten()
-    return f1_score(true, pred, labels=[-1, 0, 1], average='micro')
+    return f1_score(true, pred, labels=[-1, 1], average='micro')
 
 def evaluate_causal_matrices(true_matrices, est_matrices):
     results = {}
     
-    # Combine all matrices into single matrices for true and estimated
+    # Record the number of lags
+    results['true_lags'] = len(true_matrices)
+    results['est_lags'] = len(est_matrices)
+    results['extra_lags'] = max(0, len(est_matrices) - len(true_matrices))
+    results['missing_lags'] = max(0, len(true_matrices) - len(est_matrices))
+    
+    # Combine true matrices
     true_combined = np.hstack(true_matrices)
-    est_combined = np.hstack(est_matrices[:len(true_matrices)])  # Use only up to the number of true matrices
+    
+    # Combine estimated matrices, padding with zeros if necessary
+    if len(est_matrices) < len(true_matrices):
+        # Pad with zero matrices if estimated lags are fewer than true lags
+        num_vars = est_matrices[0].shape[0]
+        zero_matrices = [np.zeros((num_vars, num_vars)) for _ in range(len(true_matrices) - len(est_matrices))]
+        est_matrices = np.vstack((est_matrices, zero_matrices))
+        est_combined = np.hstack(est_matrices + zero_matrices)
+    else:
+        # Use only up to the number of true lags
+        est_combined = np.hstack(est_matrices[:len(true_matrices)])
+    
     print("True combined: \n", true_combined)
     print("Est combined: \n", est_combined)
     
@@ -32,17 +49,11 @@ def evaluate_causal_matrices(true_matrices, est_matrices):
         return None
     
     # Calculate metrics for the combined matrices
-    results['fro'] = frobenius_norm(true_combined, est_combined) # Element-wise comparison
-    results['shd'] = structural_hamming_distance(true_combined, est_combined) # Edge-wise comparison
-    results['f1'] = calculate_f1(true_combined, est_combined)
-    results['f1_directed'] = calculate_f1_directed(true_combined, est_combined)
-    
-    # Record the number of lags
-    results['true_lags'] = len(true_matrices)
-    results['est_lags'] = len(est_matrices)
-    results['extra_lags'] = max(0, len(est_matrices) - len(true_matrices))
-    results['missing_lags'] = max(0, len(true_matrices) - len(est_matrices))
-    
+    results['fro'] = round(frobenius_norm(true_combined, est_combined), 3)
+    results['shd'] = int(structural_hamming_distance(true_combined, est_combined))
+    results['f1'] = round(calculate_f1(true_combined, est_combined), 3)
+    results['f1_directed'] = round(calculate_f1_directed(true_combined, est_combined), 3)
+
     # Record the number of true edges
     results['num_true_edges'] = np.sum(np.abs(np.sign(true_combined)))
     
@@ -64,19 +75,19 @@ def interpret_evaluation_metrics(results):
     
     # Interpret Structural Hamming Distance 
     shd = results['shd']
-    total_elements = np.prod(results['num_true_edges'])
-    shd_ratio = shd / total_elements
+    true_edges = np.prod(results['num_true_edges'])
+    normalized_shd = shd / true_edges if true_edges > 0 else 0
     print("SHD: ", shd)
-    print("Total elements: ", total_elements)
-    print("SHD ratio: ", shd_ratio)
-    if shd_ratio < 0.3:
-        interpretations['Structural Hamming Distance'] = f"Excellent: {shd} ({shd_ratio:.2%}). Very few structural differences."
-    elif shd_ratio < 0.7:
-        interpretations['Structural Hamming Distance'] = f"Good: {shd} ({shd_ratio:.2%}). Some structural differences."
-    elif shd_ratio < 1.0:
-        interpretations['Structural Hamming Distance'] = f"Fair: {shd} ({shd_ratio:.2%}). Significant structural differences."
+    print("True Edges: ", true_edges)
+    print("Normalized SHD: ", normalized_shd)
+    if normalized_shd < 0.3:
+        interpretations['Structural Hamming Distance'] = f"Excellent: {shd} ({normalized_shd:.2%}). Very few structural differences."
+    elif normalized_shd < 0.7:
+        interpretations['Structural Hamming Distance'] = f"Good: {shd} ({normalized_shd:.2%}). Some structural differences."
+    elif normalized_shd < 1.0:
+        interpretations['Structural Hamming Distance'] = f"Fair: {shd} ({normalized_shd:.2%}). Significant structural differences."
     else:
-        interpretations['Structural Hamming Distance'] = f"Poor: {shd} ({shd_ratio:.2%}). Many structural differences."
+        interpretations['Structural Hamming Distance'] = f"Poor: {shd} ({normalized_shd:.2%}). Many structural differences."
     
     # Interpret F1 Score
     f1 = results['f1']

@@ -2,13 +2,13 @@
 robust_varlingam.py
 
 This module implements a Robust Cross-Validated Vector Autoregressive Linear Non-Gaussian Acyclic Model (RCV-VAR-LiNGAM).
-It extends the traditional VAR-LiNGAM by incorporating cross-validation and stability checks to improve the reliability
+It extends the traditional VAR-LiNGAM by incorporating cross-validation and variability checks to improve the reliability
 of causal discovery in time series data.
 
 The main function, run_rcv_varlingam, performs the following steps:
 1. Fits an initial VAR-LiNGAM model on the entire dataset.
-2. Performs k-fold cross-validation to assess the stability of causal relationships.
-3. Validates and adjusts the initial model based on consistency and stability criteria.
+2. Performs k-fold cross-validation to assess the variability of causal relationships.
+3. Validates and adjusts the initial model based on consistency and variability criteria.
 4. Returns a set of adjacency matrices representing robust causal relationships.
 
 This method is particularly useful for identifying stable causal structures in time series data,
@@ -25,7 +25,7 @@ from src.causal_matrix_evaluation import evaluate_causal_matrices
 from itertools import product
 
 
-def run_rcv_varlingam(data, n_splits=7, consistency_threshold=0.7, stability_threshold=0.4, adjustment_weight=0.1):
+def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.7, variability_threshold=0.4, adjustment_weight=0):
     """
     Run Robust Cross-Validated VAR-LiNGAM on the given data.
 
@@ -33,7 +33,7 @@ def run_rcv_varlingam(data, n_splits=7, consistency_threshold=0.7, stability_thr
     data (np.array): The input time series data.
     n_splits (int): Number of splits for k-fold cross-validation.
     consistency_threshold (float): Threshold for consistency check.
-    stability_threshold (float): Threshold for stability check.
+    variability_threshold (float): Threshold for variability check.
     adjustment_weight (float): Weight for adjusting the initial estimates.
 
     Returns:
@@ -43,6 +43,7 @@ def run_rcv_varlingam(data, n_splits=7, consistency_threshold=0.7, stability_thr
     initial_fit = run_varlingam(data)
     initial_matrices = initial_fit.adjacency_matrices_
     n_lags = len(initial_matrices) - 1
+    n_vars = initial_matrices[0].shape[0]
 
     kf = KFold(n_splits=n_splits)
     all_adjacency_matrices = []
@@ -50,13 +51,44 @@ def run_rcv_varlingam(data, n_splits=7, consistency_threshold=0.7, stability_thr
     for train_index, _ in kf.split(data):
         train_data = data[train_index]
         fit_results = run_varlingam(train_data, lags=n_lags)
-        all_adjacency_matrices.append(fit_results.adjacency_matrices_)
+        # Pad or truncate the result to match the initial number of lags
+        padded_matrices = pad_or_truncate_matrices(fit_results.adjacency_matrices_, n_lags, n_vars)
+        all_adjacency_matrices.append(padded_matrices)
     
     # Validation and adjustment process
     validated_matrices = validate_and_adjust_matrices(initial_matrices, all_adjacency_matrices, 
-                                                      consistency_threshold, stability_threshold, adjustment_weight)
+                                                      consistency_threshold, variability_threshold, adjustment_weight)
     
     return validated_matrices
+
+
+def pad_or_truncate_matrices(matrices, target_n_lags, n_vars):
+    """
+    Pad or truncate the matrices to match the target number of lags.
+
+    Parameters:
+    matrices (list): List of adjacency matrices.
+    target_n_lags (int): Target number of lags.
+    n_vars (int): Number of variables.
+
+    Returns:
+    list: Padded or truncated list of adjacency matrices.
+    """
+    current_n_lags = len(matrices) - 1
+    
+    if current_n_lags < target_n_lags:
+        # Pad with zero matrices
+        padding = np.zeros((target_n_lags - current_n_lags, n_vars, n_vars))
+        padded_matrices = np.vstack((matrices, padding))
+    elif current_n_lags > target_n_lags:
+        # Truncate
+        padded_matrices = matrices[:target_n_lags]
+    else:
+        # No change needed
+        padded_matrices = matrices
+    
+    return padded_matrices
+
 
 def remove_outliers(data):
     """
@@ -75,7 +107,7 @@ def remove_outliers(data):
     upper_bound = q3 + 1.5 * iqr
     return [x for x in data if lower_bound <= x <= upper_bound]
 
-def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_threshold, stability_threshold, adjustment_weight):
+def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_threshold, variability_threshold, adjustment_weight):
     """
     Validate and adjust the initial matrices based on cross-validation results.
 
@@ -83,7 +115,7 @@ def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_thr
     initial_matrices (list): Initial adjacency matrices from VAR-LiNGAM.
     all_matrices (list): List of adjacency matrices from cross-validation.
     consistency_threshold (float): Threshold for consistency check.
-    stability_threshold (float): Threshold for stability check.
+    variability_threshold (float): Threshold for variability check.
     adjustment_weight (float): Weight for adjusting the initial estimates.
 
     Returns:
@@ -91,6 +123,9 @@ def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_thr
     """
     n_lags = len(initial_matrices)
     n_vars = initial_matrices[0].shape[0]
+    # print("Initial matrices", initial_matrices.shape)
+    # for i in range(len(all_matrices)):
+    #     print(all_matrices[i].shape)
     
     validated_matrices = []
     for lag in range(n_lags):
@@ -104,10 +139,10 @@ def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_thr
                 consistent_count = sum(1 for v in fold_values if np.sign(v) == np.sign(initial_value))
                 consistency = consistent_count / len(fold_values)
                 
-                # Check stability
-                stability = np.std(fold_values) / (np.abs(initial_value) + 1e-8)
+                # Check variability
+                variability = np.std(fold_values) / (np.abs(initial_value) + 1e-8)
                 
-                if consistency > consistency_threshold and stability < stability_threshold:
+                if consistency > consistency_threshold and variability < variability_threshold:
                     # Remove outliers and calculate mean
                     cleaned_fold_values = remove_outliers(fold_values)
                     if cleaned_fold_values:  # Check if there are any values left after removing outliers
@@ -140,14 +175,14 @@ def grid_search_rcv_varlingam(data, true_matrices, param_grid=None):
     """
     if param_grid is None:
         param_grid = {
-            'n_splits': range(3, 10, 2),
-            'consistency_threshold': np.arange(0.1, 1.0, 0.2),
-            'stability_threshold': np.arange(0.1, 1.0, 0.1),
-            'adjustment_weight': np.arange(0.1, 0.5, 0.1)
+            'n_splits': range(3, 8, 2),
+            'consistency_threshold': np.arange(0.1, 1.0, 0.3),
+            'variability_threshold': np.arange(0.1, 1.0, 0.3),
+            'adjustment_weight': np.arange(0, 0.3, 0.1)
         }
 
     param_combinations = list(product(*param_grid.values()))
-    best_score = float('inf')
+    best_score = 0
     best_params = None
     best_matrices = None
 
@@ -157,9 +192,9 @@ def grid_search_rcv_varlingam(data, true_matrices, param_grid=None):
         validated_matrices = run_rcv_varlingam(data, **current_params)
         
         evaluation_results = evaluate_causal_matrices(true_matrices, validated_matrices)
-        current_score = evaluation_results['fro']  # Using Frobenius norm as the score
+        current_score = evaluation_results['f1_directed']  # Using F1 score (directed) as the score
 
-        if current_score < best_score:
+        if current_score > best_score:
             best_score = current_score
             best_params = current_params
             best_matrices = validated_matrices
