@@ -25,7 +25,7 @@ from src.causal_matrix_evaluation import evaluate_causal_matrices
 from itertools import product
 
 
-def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.7, variability_threshold=0.4, adjustment_weight=0):
+def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.4, variability_threshold=0.4, adjustment_weight=0):
     """
     Run Robust Cross-Validated VAR-LiNGAM on the given data.
 

@@ -40,8 +40,8 @@ def evaluate_causal_matrices(true_matrices, est_matrices):
         # Use only up to the number of true lags
         est_combined = np.hstack(est_matrices[:len(true_matrices)])
     
-    print("True combined: \n", true_combined)
-    print("Est combined: \n", est_combined)
+    # print("True combined: \n", true_combined)
+    # print("Est combined: \n", est_combined)
     
     # Check if true and estimated matrices have the same shape
     if len(true_combined) !=  len(est_combined):
@@ -77,9 +77,9 @@ def interpret_evaluation_metrics(results):
     shd = results['shd']
     true_edges = np.prod(results['num_true_edges'])
     normalized_shd = shd / true_edges if true_edges > 0 else 0
-    print("SHD: ", shd)
-    print("True Edges: ", true_edges)
-    print("Normalized SHD: ", normalized_shd)
+    # print("SHD: ", shd)
+    # print("True Edges: ", true_edges)
+    # print("Normalized SHD: ", normalized_shd)
     if normalized_shd < 0.3:
         interpretations['Structural Hamming Distance'] = f"Excellent: {shd} ({normalized_shd:.2%}). Very few structural differences."
     elif normalized_shd < 0.7:

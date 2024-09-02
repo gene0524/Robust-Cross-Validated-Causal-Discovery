@@ -25,7 +25,7 @@ from src.run_causal_discovery import run_pcmci
 from src.causal_matrix_evaluation import evaluate_causal_matrices
 from itertools import product
 
-def run_rcv_pcmci(data, n_splits=7, consistency_threshold=0.1, variability_threshold=0.1, adjustment_weight=0):
+def run_rcv_pcmci(data, n_splits=7, consistency_threshold=0.7, variability_threshold=0.4, adjustment_weight=0):
     # Initial fit with all data
     initial_matrices = run_pcmci(data)
     n_lags = len(initial_matrices) - 1
