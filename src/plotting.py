@@ -31,7 +31,7 @@ def plot_heatmap(adjacency_matrices, columns, title="Heatmap of Adjacency Matric
     # set figure size
     fig_width = 5 * ncols
     fig_height = 4 * nrows
-    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height))#, facecolor='none', edgecolor='none')
     
     # If there is only one subplot, convert axes to a 2D array for uniform processing
     if num_matrices == 1:
@@ -71,6 +71,10 @@ def plot_heatmap(adjacency_matrices, columns, title="Heatmap of Adjacency Matric
     plt.show()
     return plt.gcf()
 
+    # fig.patch.set_alpha(0) # Transparent background
+    # plt.savefig('heatmap.png', bbox_inches='tight', pad_inches=0, transparent=True)
+    # return fig
+
 
 def plot_causal_graph(
     adjacency_matrices,
@@ -99,8 +103,8 @@ def plot_causal_graph(
     for layer in range(num_layers):
         for node in range(num_nodes_per_layer):
             node_name = labels[layer * num_nodes_per_layer + node] if labels else f"x{node}(t-{num_layers-layer-1})"
-            x_pos = (num_layers - layer - 1) * 5
-            y_pos = (num_nodes_per_layer - node - 1) * 2
+            x_pos = (num_layers - layer - 1) * 3
+            y_pos = (num_nodes_per_layer - node - 1) * 1
             d.node(node_name, pos=f"{x_pos},{y_pos}!")
     
     base_colors = ["red", "green", "blue"]  # Define colors for layers

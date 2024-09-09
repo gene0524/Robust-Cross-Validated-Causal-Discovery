@@ -1,9 +1,6 @@
 import numpy as np
 from sklearn.metrics import f1_score
 
-def frobenius_norm(A, B):
-    return np.linalg.norm(A - B, 'fro')
-
 def structural_hamming_distance(A, B):
     return np.sum(np.abs(np.sign(A) - np.sign(B)))
 
@@ -16,6 +13,9 @@ def calculate_f1_directed(A, B):
     true = np.sign(A).flatten()
     pred = np.sign(B).flatten()
     return f1_score(true, pred, labels=[-1, 1], average='micro')
+
+def frobenius_norm(A, B):
+    return np.linalg.norm(A - B, 'fro')
 
 def evaluate_causal_matrices(true_matrices, est_matrices):
     results = {}
@@ -35,7 +35,7 @@ def evaluate_causal_matrices(true_matrices, est_matrices):
         num_vars = est_matrices[0].shape[0]
         zero_matrices = [np.zeros((num_vars, num_vars)) for _ in range(len(true_matrices) - len(est_matrices))]
         est_matrices = np.vstack((est_matrices, zero_matrices))
-        est_combined = np.hstack(est_matrices + zero_matrices)
+        est_combined = np.hstack(est_matrices)
     else:
         # Use only up to the number of true lags
         est_combined = np.hstack(est_matrices[:len(true_matrices)])
@@ -49,10 +49,10 @@ def evaluate_causal_matrices(true_matrices, est_matrices):
         return None
     
     # Calculate metrics for the combined matrices
-    results['fro'] = round(frobenius_norm(true_combined, est_combined), 3)
     results['shd'] = int(structural_hamming_distance(true_combined, est_combined))
     results['f1'] = round(calculate_f1(true_combined, est_combined), 3)
     results['f1_directed'] = round(calculate_f1_directed(true_combined, est_combined), 3)
+    results['fro'] = round(frobenius_norm(true_combined, est_combined), 3)
 
     # Record the number of true edges
     results['num_true_edges'] = np.sum(np.abs(np.sign(true_combined)))
@@ -61,17 +61,6 @@ def evaluate_causal_matrices(true_matrices, est_matrices):
 
 def interpret_evaluation_metrics(results):
     interpretations = {}
-    
-    # Interpret Frobenius norm
-    fro = results['fro']
-    if fro < 0.3:
-        interpretations['Frobenius Norm'] = f"Excellent: {fro:.3f}. Very close match between true and estimated matrices."
-    elif fro < 0.7:
-        interpretations['Frobenius Norm'] = f"Good: {fro:.3f}. Reasonable match between true and estimated matrices."
-    elif fro < 1.0:
-        interpretations['Frobenius Norm'] = f"Fair: {fro:.3f}. Some discrepancies between true and estimated matrices."
-    else:
-        interpretations['Frobenius Norm'] = f"Poor: {fro:.3f}. Large discrepancies between true and estimated matrices."
     
     # Interpret Structural Hamming Distance 
     shd = results['shd']
@@ -110,6 +99,17 @@ def interpret_evaluation_metrics(results):
         interpretations['F1→'] = f"Fair: {f1_directed:.3f}. Moderate accuracy in identifying directed causal relationships."
     else:
         interpretations['F1→'] = f"Poor: {f1_directed:.3f}. Low accuracy in identifying directed causal relationships."
+    
+    # Interpret Frobenius norm
+    fro = results['fro']
+    if fro < 0.3:
+        interpretations['Frobenius Norm'] = f"Excellent: {fro:.3f}. Very close match between true and estimated matrices."
+    elif fro < 0.7:
+        interpretations['Frobenius Norm'] = f"Good: {fro:.3f}. Reasonable match between true and estimated matrices."
+    elif fro < 1.0:
+        interpretations['Frobenius Norm'] = f"Fair: {fro:.3f}. Some discrepancies between true and estimated matrices."
+    else:
+        interpretations['Frobenius Norm'] = f"Poor: {fro:.3f}. Large discrepancies between true and estimated matrices."
     
     # Interpret lag estimation
     if results['extra_lags'] == 0 and results['missing_lags'] == 0:
