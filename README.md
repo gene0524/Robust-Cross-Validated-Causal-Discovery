@@ -1,33 +1,52 @@
-# Robust Time Series Causal Discovery for ABM Validation
+# RCV: A Robust Cross-Validated Framework for Time Series Causal Discovery
 
-This repository contains the implementation and evaluation of Robust Cross-Validated (RCV) causal discovery methods for time series data, with applications in Agent-Based Model (ABM) validation.
+This repository contains the implementation of RCV (Robust Cross-Validated) framework for time series causal discovery, along with its applications and experimental validations.
 
 ## Project Overview
 
-This project introduces novel RCV extensions to VAR-LiNGAM and PCMCI causal discovery methods, aiming to improve robustness and accuracy in identifying causal structures in complex time series data. It also presents an enhanced ABM validation framework incorporating these methods.
+The RCV framework extends traditional causal discovery methods by incorporating cross-validation and robustness checks, significantly improving the reliability of causal structure identification in time series data. This project demonstrates the framework's effectiveness through applications with VAR-LiNGAM and PCMCI methods, and provides comprehensive experimental validation.
 
 ## Repository Structure
 
 - `data/`: Contains real and synthetic datasets used in experiments.
 - `results/`: Stores experimental results and analysis.
-- `src/`: Source code for causal discovery methods and RCV extensions.
+- `src/`: Source code for the RCV framework and method implementations.
+  - `rcv_framework.py`: Core implementation of the Robust Cross-Validation framework
+  - `run_causal_discovery.py`: Implementation of various causal discovery methods and their RCV extensions
+  - `causal_matrix_evaluation.py`: Utilities for evaluating causal matrices
+  - `models/`: External model implementations (VAR-LiNGAM, PCMCI, TCDF)
 - `*.ipynb`: Jupyter notebooks for running experiments and analysis.
 
 ## Key Components
 
-1. RCV-VAR-LiNGAM and RCV-PCMCI implementations (`src/rcv_varlingam.py`, `src/rcv_pcmci.py`)
-2. Synthetic dataset generator (`data/synthetic/generate_synthetic_data.ipynb`)
-3. Experimental notebooks for synthetic and fMRI data (`run_experiments_*.ipynb`)
-4. Enhanced ABM Validation Framework (`ABM_Validation_Framework.ipynb`)
+1. RCV Framework Implementation (`src/rcv_framework.py`)
+   - Generic RCV implementation applicable to various causal discovery methods
+   - Grid search functionality for parameter optimization
+   - Robust validation and adjustment procedures
+
+2. Causal Discovery Methods (`src/run_causal_discovery.py`)
+   - Base implementations: VAR-LiNGAM, PCMCI, TCDF, VAR-LiNGAM Bootstrap
+   - RCV extensions: RCV-VAR-LiNGAM, RCV-PCMCI
+   - Utility functions for matrix manipulation and evaluation
+
+3. Experimental Components
+   - Synthetic dataset generator (`data/synthetic/generate_synthetic_data.ipynb`)
+   - Experimental notebooks for synthetic and fMRI data (`run_experiments_*.ipynb`)
+   - Application examples and case studies
 
 ## Setup and Usage
 
 1. Clone the repository
 2. Install required dependencies (list dependencies or include a requirements.txt)
-3. Run the Jupyter notebooks to reproduce experiments or use the ABM validation framework
+3. Run the Jupyter notebooks to reproduce experiments or use the framework
 
-## Results
+### Example Usage
 
-Experimental results demonstrate the superior performance of RCV methods across various data characteristics and scales, particularly in handling non-linear, non-Gaussian, and non-stationary time series data.
+```python
+from src.run_causal_discovery import run_rcv_varlingam, run_rcv_pcmci
 
-For detailed findings and analysis, refer to the results directory and individual experiment notebooks.
+# Run RCV-VARLiNGAM
+results = run_rcv_varlingam(data, n_splits=5)
+
+# Run RCV-PCMCI
+results = run_rcv_pcmci(data, n_splits=7)

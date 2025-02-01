@@ -1,9 +1,13 @@
 import numpy as np
+import pandas as pd
+import os
 from src.models.lingam_master import lingam
 from src.models.tigramite_master.tigramite.pcmci import PCMCI
 from src.models.tigramite_master.tigramite.independence_tests.parcorr import ParCorr
 from src.models.tigramite_master.tigramite import data_processing as pp
+from src.models.TCDF_master import TCDF
 from src.causal_matrix_evaluation import evaluate_causal_matrices
+from src.rcv_framework import run_rcv, grid_search_rcv
 from itertools import product
 
 def run_varlingam(data, lags=3):
@@ -16,7 +20,7 @@ def run_varlingam(data, lags=3):
     """
     model = lingam.VARLiNGAM(lags=lags, prune=True)
     results = model.fit(data)
-    return results
+    return results.adjacency_matrices_
 
 
 def run_pcmci(data, columns=None, alpha=0.05, tau_max=3):
@@ -157,7 +161,6 @@ def grid_search_bootstrap_varlingam(data, true_matrices, param_grid):
     Returns:
     dict: Results of the grid search.
     """
-    from src.causal_matrix_evaluation import evaluate_causal_matrices
     
     best_score = float('inf')
     best_params = {}
@@ -170,7 +173,7 @@ def grid_search_bootstrap_varlingam(data, true_matrices, param_grid):
                     bootstrap_matrices = run_varlingam_bootstrap(
                         data, lags, n_sampling, variance_threshold, occurrence_threshold
                     )
-                    score = evaluate_causal_matrices(true_matrices, bootstrap_matrices)['fro']
+                    score = evaluate_causal_matrices(true_matrices, bootstrap_matrices)['f1']
                     
                     if score < best_score:
                         best_score = score
@@ -188,47 +191,159 @@ def grid_search_bootstrap_varlingam(data, true_matrices, param_grid):
         'best_matrices': best_matrices
     }
 
+def run_tcdf(data, cuda=False, nrepochs=1000, kernel_size=4, levels=1, 
+             loginterval=500, learningrate=0.01, optimizername='Adam',
+             seed=1111, dilation_c=4, significance=0.8):
+    """Run TCDF analysis on numpy array data"""
+    
+    # Create temporary CSV with numerical column names
+    df = pd.DataFrame(data, columns=[f'x{i}' for i in range(data.shape[1])])
+    temp_filename = 'temp_tcdf.csv'
+    df.to_csv(temp_filename, index=False)
+    
+    # Run TCDF analysis
+    allcauses = {}
+    alldelays = {}
+    
+    for i in range(data.shape[1]):
+        col_name = f'x{i}'
+        causes, causeswithdelay, _, _ = TCDF.findcauses(
+            col_name, cuda=cuda, epochs=nrepochs, kernel_size=kernel_size, 
+            layers=levels, log_interval=loginterval, lr=learningrate,
+            optimizername=optimizername, seed=seed, dilation_c=dilation_c,
+            significance=significance, file=temp_filename
+        )
+        allcauses[i] = causes
+        alldelays.update(causeswithdelay)
+    
+    # Clean up
+    os.remove(temp_filename)
+    
+    # Convert to adjacency matrices
+    adj_matrices = tcdf_to_matrices(alldelays, data.shape[1])
+    
+    return adj_matrices
 
-def grid_search_varlingam_bootstrap(data, true_matrices, param_grid=None):
+def tcdf_to_matrices(alldelays, n_variables):
     """
-    Perform grid search to find the best parameters for VARLiNGAM bootstrap().
-
-    Args:
-    data (np.array): The input time series data.
-    true_matrices (list): List of true causal matrices.
-    param_grid (dict, optional): Dictionary with parameters names (str) as keys and lists of parameter settings to try as values.
-
+    Convert TCDF delays output to adjacency matrices
+    
+    Parameters:
+    -----------
+    alldelays : dict
+        Dictionary where keys are (target, cause) tuples and values are delays
+    n_variables : int
+        Number of variables in the dataset
+        
     Returns:
-    dict: Best parameters, best score, and best matrices.
+    --------
+    list
+        List of adjacency matrices, where index represents the time lag
     """
-    if param_grid is None:
-        param_grid = {
-            'lags': range(1, 6),
-            'n_sampling': range(10, 101, 20),
-            'variance_threshold': np.arange(0.1, 1.1, 0.2),
-            'occurrence_threshold': np.arange(0.1, 1.0, 0.2)
-        }
+    max_delay = max(alldelays.values()) if alldelays else 0
+    adj_matrices = [np.zeros((n_variables, n_variables)) for _ in range(max_delay + 1)]
+    
+    for (target, cause), delay in alldelays.items():
+        adj_matrices[delay][target][cause] = 1
+            
+    return adj_matrices
 
-    param_combinations = list(product(*param_grid.values()))
-    best_score = float('inf')
-    best_params = None
-    best_matrices = None
+def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.4, 
+                     variability_threshold=0.4, adjustment_weight=0, **varlingam_params):
+    """
+    Run RCV-VARLiNGAM using the generic RCV framework
+    """
+    
+    # Set default VARLiNGAM parameters if not provided
+    params = {'lags': 3}
+    params.update(varlingam_params)
+    
+    return run_rcv(data, run_varlingam, n_splits=n_splits,
+                  consistency_threshold=consistency_threshold,
+                  variability_threshold=variability_threshold,
+                  adjustment_weight=adjustment_weight,
+                  **params)
 
-    for params in param_combinations:
-        current_params = dict(zip(param_grid.keys(), params))
+def grid_search_rcv_varlingam(data, true_matrices, param_grid=None, varlingam_params=None):
+    """
+    Perform grid search for RCV-VARLiNGAM parameters.
+    
+    Parameters:
+    -----------
+    data : numpy.ndarray
+        Input time series data
+    true_matrices : list
+        True adjacency matrices for evaluation
+    param_grid : dict, optional
+        Grid of RCV parameters to search
+    varlingam_params : dict, optional
+        Additional parameters for VARLiNGAM
         
-        bootstrap_matrices = run_varlingam_bootstrap(data, **current_params)
+    Returns:
+    --------
+    dict
+        Best parameters, score, and matrices
+    """
+    
+    # Set default VARLiNGAM parameters if not provided
+    base_params = {'lags': 3}
+    if varlingam_params:
+        base_params.update(varlingam_params)
+    
+    return grid_search_rcv(
+        data=data,
+        true_matrices=true_matrices,
+        base_method=run_varlingam,
+        param_grid=param_grid,
+        method_params=base_params
+    )
+
+def run_rcv_pcmci(data, n_splits=7, consistency_threshold=0.7,
+                  variability_threshold=0.4, adjustment_weight=0, **pcmci_params):
+    """
+    Run RCV-PCMCI using the generic RCV framework
+    """
+    
+    # Set default PCMCI parameters if not provided
+    params = {'alpha': 0.05, 'tau_max': 3}
+    params.update(pcmci_params)
+    
+    return run_rcv(data, run_pcmci, n_splits=n_splits,
+                  consistency_threshold=consistency_threshold,
+                  variability_threshold=variability_threshold,
+                  adjustment_weight=adjustment_weight,
+                  **params)
+
+def grid_search_rcv_pcmci(data, true_matrices, param_grid=None, pcmci_params=None):
+    """
+    Perform grid search for RCV-PCMCI parameters.
+    
+    Parameters:
+    -----------
+    data : numpy.ndarray
+        Input time series data
+    true_matrices : list
+        True adjacency matrices for evaluation
+    param_grid : dict, optional
+        Grid of RCV parameters to search
+    pcmci_params : dict, optional
+        Additional parameters for PCMCI
         
-        evaluation_results = evaluate_causal_matrices(true_matrices, bootstrap_matrices)
-        current_score = evaluation_results['fro']  # Using Frobenius norm as the score
-
-        if current_score < best_score:
-            best_score = current_score
-            best_params = current_params
-            best_matrices = bootstrap_matrices
-
-    return {
-        'best_params': best_params,
-        'best_score': best_score,
-        'best_matrices': best_matrices
-    }
+    Returns:
+    --------
+    dict
+        Best parameters, score, and matrices
+    """
+    
+    # Set default PCMCI parameters if not provided
+    base_params = {'alpha': 0.05, 'tau_max': 3}
+    if pcmci_params:
+        base_params.update(pcmci_params)
+    
+    return grid_search_rcv(
+        data=data,
+        true_matrices=true_matrices,
+        base_method=run_pcmci,
+        param_grid=param_grid,
+        method_params=base_params
+    )

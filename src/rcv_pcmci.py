@@ -1,5 +1,5 @@
 """
-robust_pcmci.py
+rcv_pcmci.py
 
 This module implements a Robust Cross-Validated Peter and Clark Momentary Conditional Independence method (RCV-PCMCI).
 It extends the traditional PCMCI by incorporating cross-validation and variability checks to improve the reliability
@@ -153,7 +153,7 @@ def grid_search_rcv_pcmci(data, true_matrices, param_grid=None):
         validated_matrices = run_rcv_pcmci(data, **current_params)
         
         evaluation_results = evaluate_causal_matrices(true_matrices, validated_matrices)
-        current_score = evaluation_results['f1_directed']  # Using F1 score (directed) as the score
+        current_score = evaluation_results['f1']  # Using F1 score as the score
 
         if current_score > best_score:
             best_score = current_score

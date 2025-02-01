@@ -1,5 +1,5 @@
 """
-robust_varlingam.py
+rcv_varlingam.py
 
 This module implements a Robust Cross-Validated Vector Autoregressive Linear Non-Gaussian Acyclic Model (RCV-VAR-LiNGAM).
 It extends the traditional VAR-LiNGAM by incorporating cross-validation and variability checks to improve the reliability
@@ -40,8 +40,7 @@ def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.4, variability_t
     list: A list of adjacency matrices representing robust causal relationships.
     """
     # Initial fit with all data
-    initial_fit = run_varlingam(data)
-    initial_matrices = initial_fit.adjacency_matrices_
+    initial_matrices = run_varlingam(data)
     n_lags = len(initial_matrices) - 1
     n_vars = initial_matrices[0].shape[0]
 
@@ -52,7 +51,7 @@ def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.4, variability_t
         train_data = data[train_index]
         fit_results = run_varlingam(train_data, lags=n_lags)
         # Pad or truncate the result to match the initial number of lags
-        padded_matrices = pad_or_truncate_matrices(fit_results.adjacency_matrices_, n_lags, n_vars)
+        padded_matrices = pad_or_truncate_matrices(fit_results, n_lags, n_vars)
         all_adjacency_matrices.append(padded_matrices)
     
     # Validation and adjustment process
@@ -192,7 +191,7 @@ def grid_search_rcv_varlingam(data, true_matrices, param_grid=None):
         validated_matrices = run_rcv_varlingam(data, **current_params)
         
         evaluation_results = evaluate_causal_matrices(true_matrices, validated_matrices)
-        current_score = evaluation_results['f1_directed']  # Using F1 score (directed) as the score
+        current_score = evaluation_results['f1']  # Using F1 score  as the score
 
         if current_score > best_score:
             best_score = current_score

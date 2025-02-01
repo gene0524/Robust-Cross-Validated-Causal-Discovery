@@ -9,7 +9,7 @@ def calculate_f1(A, B):
     pred = (np.abs(B) > 1e-6).flatten()
     return f1_score(true, pred)
 
-def calculate_f1_directed(A, B):
+def calculate_f1_sign(A, B):
     true = np.sign(A).flatten()
     pred = np.sign(B).flatten()
     return f1_score(true, pred, labels=[-1, 1], average='micro')
@@ -51,7 +51,7 @@ def evaluate_causal_matrices(true_matrices, est_matrices):
     # Calculate metrics for the combined matrices
     results['shd'] = int(structural_hamming_distance(true_combined, est_combined))
     results['f1'] = round(calculate_f1(true_combined, est_combined), 3)
-    results['f1_directed'] = round(calculate_f1_directed(true_combined, est_combined), 3)
+    results['f1_sign'] = round(calculate_f1_sign(true_combined, est_combined), 3)
     results['fro'] = round(frobenius_norm(true_combined, est_combined), 3)
 
     # Record the number of true edges
@@ -89,16 +89,16 @@ def interpret_evaluation_metrics(results):
     else:
         interpretations['f1'] = f"Poor: {f1:.3f}. Low accuracy in identifying causal relationships."
     
-    # Interpret Directed F1 Score
-    f1_directed = results['f1_directed']
-    if f1_directed > 0.9:
-        interpretations['F1→'] = f"Excellent: {f1_directed:.3f}. Very high accuracy in identifying directed causal relationships."
-    elif f1_directed > 0.7:
-        interpretations['F1→'] = f"Good: {f1_directed:.3f}. Good accuracy in identifying directed causal relationships."
-    elif f1_directed > 0.5:
-        interpretations['F1→'] = f"Fair: {f1_directed:.3f}. Moderate accuracy in identifying directed causal relationships."
+    # Interpret F1-Sign Score
+    f1_sign = results['f1_sign']
+    if f1_sign > 0.9:
+        interpretations['F1-Sign'] = f"Excellent: {f1_sign:.3f}. Very high accuracy in identifying effect polarities."
+    elif f1_sign > 0.7:
+        interpretations['F1-Sign'] = f"Good: {f1_sign:.3f}. Good accuracy in identifying effect polarities."
+    elif f1_sign > 0.5:
+        interpretations['F1-Sign'] = f"Fair: {f1_sign:.3f}. Moderate accuracy in identifying effect polarities."
     else:
-        interpretations['F1→'] = f"Poor: {f1_directed:.3f}. Low accuracy in identifying directed causal relationships."
+        interpretations['F1-Sign'] = f"Poor: {f1_sign:.3f}. Low accuracy in identifying effect polarities."
     
     # Interpret Frobenius norm
     fro = results['fro']

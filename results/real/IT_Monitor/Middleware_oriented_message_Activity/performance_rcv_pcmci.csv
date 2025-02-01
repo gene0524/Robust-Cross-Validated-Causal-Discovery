@@ -1,0 +1,4 @@
+dataset,SHD,F1,F1_sign,runtime
+dataset_0,13,0.581,0.581,4.2264
+dataset_1,16,0.467,0.467,5.9878
+Overall Average,14.50,0.524,0.524,5.1071
