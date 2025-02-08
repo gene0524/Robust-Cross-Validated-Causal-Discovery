@@ -1,11 +1,11 @@
 """
-rcv_framework.py
+rcd_framework.py
 
-This module implements a generic Robust Cross-Validation framework for causal discovery methods.
+This module implements a generic Robust Consensus-Driven framework for causal discovery methods.
 The framework can be used with different base methods (like VAR-LiNGAM, PCMCI, etc.) to improve
 the reliability of causal discovery in time series data.
 
-Includes both the base RCV implementation and grid search functionality.
+Includes both the base RCD implementation and grid search functionality.
 
 Author: Gene Yu
 Date: August 2024
@@ -16,10 +16,10 @@ from sklearn.model_selection import KFold
 from itertools import product
 from src.causal_matrix_evaluation import evaluate_causal_matrices
 
-def run_rcv(data, base_method, n_splits=5, consistency_threshold=0.4, 
+def run_rcd(data, base_method, n_splits=5, consistency_threshold=0.4, 
             variability_threshold=0.4, adjustment_weight=0, **method_params):
     """
-    Generic RCV implementation that can be used with different base methods.
+    Generic RCD implementation that can be used with different base methods.
     
     Parameters:
     -----------
@@ -28,7 +28,7 @@ def run_rcv(data, base_method, n_splits=5, consistency_threshold=0.4,
     base_method : function
         Base causal discovery method to use (e.g., run_varlingam, run_pcmci)
     n_splits : int
-        Number of splits for cross-validation
+        Number of splits for k-fold validation
     consistency_threshold : float
         Threshold for consistency check
     variability_threshold : float
@@ -48,7 +48,7 @@ def run_rcv(data, base_method, n_splits=5, consistency_threshold=0.4,
     n_lags = len(initial_matrices)
     n_vars = initial_matrices[0].shape[0]
 
-    # Cross-validation
+    # Split data for validation
     kf = KFold(n_splits=n_splits)
     all_matrices = []
     
@@ -90,7 +90,7 @@ def remove_outliers(data):
 
 def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_threshold, 
                                variability_threshold, adjustment_weight):
-    """Validate and adjust matrices based on cross-validation results"""
+    """Validate and adjust matrices based on results from k-folds"""
     n_lags = len(initial_matrices)
     n_vars = initial_matrices[0].shape[0]
     
@@ -119,9 +119,9 @@ def validate_and_adjust_matrices(initial_matrices, all_matrices, consistency_thr
     
     return validated_matrices
 
-def grid_search_rcv(data, true_matrices, base_method, param_grid=None, method_params=None):
+def grid_search_rcd(data, true_matrices, base_method, param_grid=None, method_params=None):
     """
-    Perform grid search for RCV parameters with any base causal discovery method.
+    Perform grid search for RCD parameters with any base causal discovery method.
     
     Parameters:
     -----------
@@ -132,7 +132,7 @@ def grid_search_rcv(data, true_matrices, base_method, param_grid=None, method_pa
     base_method : function
         Base causal discovery method (e.g., run_varlingam, run_pcmci)
     param_grid : dict, optional
-        Grid of RCV parameters to search. If None, uses default grid
+        Grid of RCD parameters to search. If None, uses default grid
     method_params : dict, optional
         Additional parameters for the base method
         
@@ -164,8 +164,8 @@ def grid_search_rcv(data, true_matrices, base_method, param_grid=None, method_pa
     for params in param_combinations:
         current_params = dict(zip(param_keys, params))
         
-        # Run RCV with current parameters
-        matrices = run_rcv(
+        # Run RCD with current parameters
+        matrices = run_rcd(
             data=data,
             base_method=base_method,
             **current_params,

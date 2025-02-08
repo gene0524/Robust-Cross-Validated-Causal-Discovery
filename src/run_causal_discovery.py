@@ -7,7 +7,7 @@ from src.models.tigramite_master.tigramite.independence_tests.parcorr import Par
 from src.models.tigramite_master.tigramite import data_processing as pp
 from src.models.TCDF_master import TCDF
 from src.causal_matrix_evaluation import evaluate_causal_matrices
-from src.rcv_framework import run_rcv, grid_search_rcv
+from src.rcd_framework import run_rcd, grid_search_rcd
 from itertools import product
 
 def run_varlingam(data, lags=3):
@@ -248,25 +248,25 @@ def tcdf_to_matrices(alldelays, n_variables):
             
     return adj_matrices
 
-def run_rcv_varlingam(data, n_splits=5, consistency_threshold=0.4, 
+def run_rcd_varlingam(data, n_splits=5, consistency_threshold=0.4, 
                      variability_threshold=0.4, adjustment_weight=0, **varlingam_params):
     """
-    Run RCV-VARLiNGAM using the generic RCV framework
+    Run RCD-VARLiNGAM using the generic RCD framework
     """
     
     # Set default VARLiNGAM parameters if not provided
     params = {'lags': 3}
     params.update(varlingam_params)
     
-    return run_rcv(data, run_varlingam, n_splits=n_splits,
+    return run_rcd(data, run_varlingam, n_splits=n_splits,
                   consistency_threshold=consistency_threshold,
                   variability_threshold=variability_threshold,
                   adjustment_weight=adjustment_weight,
                   **params)
 
-def grid_search_rcv_varlingam(data, true_matrices, param_grid=None, varlingam_params=None):
+def grid_search_rcd_varlingam(data, true_matrices, param_grid=None, varlingam_params=None):
     """
-    Perform grid search for RCV-VARLiNGAM parameters.
+    Perform grid search for RCD-VARLiNGAM parameters.
     
     Parameters:
     -----------
@@ -275,7 +275,7 @@ def grid_search_rcv_varlingam(data, true_matrices, param_grid=None, varlingam_pa
     true_matrices : list
         True adjacency matrices for evaluation
     param_grid : dict, optional
-        Grid of RCV parameters to search
+        Grid of RCD parameters to search
     varlingam_params : dict, optional
         Additional parameters for VARLiNGAM
         
@@ -290,7 +290,7 @@ def grid_search_rcv_varlingam(data, true_matrices, param_grid=None, varlingam_pa
     if varlingam_params:
         base_params.update(varlingam_params)
     
-    return grid_search_rcv(
+    return grid_search_rcd(
         data=data,
         true_matrices=true_matrices,
         base_method=run_varlingam,
@@ -298,25 +298,25 @@ def grid_search_rcv_varlingam(data, true_matrices, param_grid=None, varlingam_pa
         method_params=base_params
     )
 
-def run_rcv_pcmci(data, n_splits=7, consistency_threshold=0.7,
+def run_rcd_pcmci(data, n_splits=7, consistency_threshold=0.7,
                   variability_threshold=0.4, adjustment_weight=0, **pcmci_params):
     """
-    Run RCV-PCMCI using the generic RCV framework
+    Run RCD-PCMCI using the generic RCD framework
     """
     
     # Set default PCMCI parameters if not provided
     params = {'alpha': 0.05, 'tau_max': 3}
     params.update(pcmci_params)
     
-    return run_rcv(data, run_pcmci, n_splits=n_splits,
+    return run_rcd(data, run_pcmci, n_splits=n_splits,
                   consistency_threshold=consistency_threshold,
                   variability_threshold=variability_threshold,
                   adjustment_weight=adjustment_weight,
                   **params)
 
-def grid_search_rcv_pcmci(data, true_matrices, param_grid=None, pcmci_params=None):
+def grid_search_rcd_pcmci(data, true_matrices, param_grid=None, pcmci_params=None):
     """
-    Perform grid search for RCV-PCMCI parameters.
+    Perform grid search for RCD-PCMCI parameters.
     
     Parameters:
     -----------
@@ -325,7 +325,7 @@ def grid_search_rcv_pcmci(data, true_matrices, param_grid=None, pcmci_params=Non
     true_matrices : list
         True adjacency matrices for evaluation
     param_grid : dict, optional
-        Grid of RCV parameters to search
+        Grid of RCD parameters to search
     pcmci_params : dict, optional
         Additional parameters for PCMCI
         
@@ -340,7 +340,7 @@ def grid_search_rcv_pcmci(data, true_matrices, param_grid=None, pcmci_params=Non
     if pcmci_params:
         base_params.update(pcmci_params)
     
-    return grid_search_rcv(
+    return grid_search_rcd(
         data=data,
         true_matrices=true_matrices,
         base_method=run_pcmci,
